@@ -1,0 +1,9 @@
+Resources:
+  eip:
+    Type: AWS::EC2::EIP
+
+  EipAssoc:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      EIP: eip
+      InstanceId: i-1234
