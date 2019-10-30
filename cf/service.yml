@@ -1,0 +1,146 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: ECS service
+
+Parameters:
+  DesiredCount:
+    Description: Number of tasks to launch for the service
+    Type: Number
+    Default: 2
+    MinValue: 1
+  ListenerPort:
+    Description: Listening port for container
+    Type: Number
+    Default: 8080
+  ContainerName:
+    Description: Container Name
+    Type: String
+    Default: devops-branchdev
+  DevToolsAccount:
+    Type: Number
+    Default: 150899333346
+  Environment:
+    Type: String
+    Default: dev
+  VPCID:
+    Description: LoadBalancer
+    Type:  'AWS::SSM::Parameter::Value<String>' 
+    Default: '/Networking/VPCID'
+  LoadBalancer:
+    Description: LoadBalancer
+    Type:  'AWS::SSM::Parameter::Value<String>' 
+    Default: '/Networking/LoadBalancer'
+  ClusterName:
+    Description: LoadBalancer
+    Type: String 
+    Default: 'ecs-cluster'
+
+Resources:
+
+  TaskDefinition:
+    Type: "AWS::ECS::TaskDefinition"
+    Properties:
+      ContainerDefinitions:
+        - Name: !Sub task-${ContainerName}
+          Image: !Sub '${DevToolsAccount}.dkr.ecr.${AWS::Region}.amazonaws.com/${ContainerName}-${Environment}'
+          PortMappings:
+            - ContainerPort: !Ref ListenerPort
+          Cpu: 512
+          Memory: 1024
+          MemoryReservation: 512
+          Essential: true
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-create-group: "true"
+              awslogs-region: !Sub "${AWS::Region}"
+              awslogs-group: !Sub "${ContainerName}"
+      Family: !Sub "family-${ContainerName}"
+      NetworkMode: bridge
+
+  Service:
+    DependsOn: Listener
+    Type: "AWS::ECS::Service"
+    Properties:
+      ServiceName: !Sub service-${ContainerName}
+      Cluster: !Ref ClusterName
+      DeploymentConfiguration:
+        MinimumHealthyPercent: 100
+        MaximumPercent: 200
+      DesiredCount: !Ref DesiredCount
+      HealthCheckGracePeriodSeconds: 10
+      LaunchType: EC2
+      LoadBalancers:
+        - ContainerName: !Sub task-${ContainerName}
+          ContainerPort: !Ref ListenerPort
+          TargetGroupArn: !Ref TargetGroup
+      PlacementStrategies:
+        - Field: attribute:ecs.availability-zone
+          Type: spread
+      SchedulingStrategy: REPLICA
+      TaskDefinition: !Ref TaskDefinition
+
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Port: !Ref ListenerPort
+      Protocol: HTTP
+      VpcId: !Ref VPCID
+      TargetGroupAttributes:
+      - Key: deregistration_delay.timeout_seconds
+        Value: '5'
+        
+  Listener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+      - Type: forward
+        TargetGroupArn: !Ref TargetGroup
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: !Ref ListenerPort
+      Protocol: HTTP
+
+
+  ScalingRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - application-autoscaling.amazonaws.com
+            Action: ["sts:AssumeRole"]
+      Policies:
+        - PolicyName: adjust-service-desired-count
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action: ecs:UpdateService
+                Resource: !Ref Service
+
+  ScalableTarget:
+    Type: "AWS::ApplicationAutoScaling::ScalableTargeaaat"
+    Properties:
+      MaxCapacity: 1000
+      MinCapacity: 2
+      ResourceId: !Join
+        - "/"
+        - - service
+          - !Ref ClusterName
+          - !GetAtt Service.Name
+      RoleARN: !GetAtt ScalingRole.Arn
+      ScalableDimension: ecs:service:DesiredCount
+      ServiceNamespace: ecs
+
+  ScalingPolicy:
+    Type: "AWS::ApplicationAutoScaling::ScalingPolicyaaa"
+    Properties:
+      PolicyName: ScaleWithCpu
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref ScalableTarget
+      TargetTrackingScalingPolicyConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ECSServiceAverageCPUUtilization
+        TargetValue: 80

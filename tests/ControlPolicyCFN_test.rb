@@ -1,12 +1,12 @@
 require 'cfn-model'
-require '../rules/ControlPolicyCFN'
+require './rules/IamManagedPolicyNotActionRule'
 
 #describe ControlPolicyRule do
 #  context 'resource com backlist' do
 #    it 'returns offending logical resource ids' do
-      cfn_model = CfnParser.new.parse IO.read('../cf/template.yml')
+      cfn_model = CfnParser.new.parse IO.read('./cf/template.yml')
 
-      resources = ControlPolicyRule.new.audit_impl cfn_model
+      resources = IamManagedPolicyNotActionRule.new.audit_impl cfn_model
 
     #  puts resources
 

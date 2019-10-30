@@ -4,5 +4,10 @@ Policy: Deny
 
 #Lista de recursos permitidos
 Resources:
-   - 'AWS::EC2::EIP'
-   - 'ECS'
+   - AWS::ECS::TaskDefinition
+   - AWS::ECS::Service
+   - AWS::ElasticLoadBalancingV2::TargetGroup
+   - AWS::ElasticLoadBalancingV2::Listener
+   - AWS::IAM::Role
+   - AWS::ApplicationAutoScaling::ScalableTarget
+   - AWS::ApplicationAutoScaling::ScalingPolicy
