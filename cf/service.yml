@@ -121,7 +121,7 @@ Resources:
                 Resource: !Ref Service
 
   ScalableTarget:
-    Type: "AWS::ApplicationAutoScaling::ScalableTargeaaat"
+    Type: "AWS::ApplicationAutoScaling::ScalableTarget"
     Properties:
       MaxCapacity: 1000
       MinCapacity: 2
@@ -135,7 +135,7 @@ Resources:
       ServiceNamespace: ecs
 
   ScalingPolicy:
-    Type: "AWS::ApplicationAutoScaling::ScalingPolicyaaa"
+    Type: "AWS::ApplicationAutoScaling::ScalingPolicy"
     Properties:
       PolicyName: ScaleWithCpu
       PolicyType: TargetTrackingScaling

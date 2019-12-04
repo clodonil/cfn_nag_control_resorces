@@ -1,8 +1,0 @@
----
-# Policy: Os recursos sao permitidos por padrao
-Policy: Allow
-
-#Lista de recursos negados
-Resources:
-   - 'AWS::EC2::EIP'
-   - 'ECS'
